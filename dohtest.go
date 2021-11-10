@@ -12,6 +12,7 @@ import (
 // https://quad9.net
 const quad9 string = "9.9.9.9:domain"
 const cloudflare string = "1.1.1.1:domain"
+const dnsMediaType string = "application/dns-message"
 
 func forward(msg []byte) ([]byte, error) {
 	fmt.Println("starting to resolve")
@@ -34,6 +35,15 @@ func forward(msg []byte) ([]byte, error) {
 }
 
 func dnsHandler(w http.ResponseWriter, req *http.Request) {
+	if v, ok := req.Header["Content-Type"]; ok {
+		for _, s := range v {
+			if s != dnsMediaType {
+				http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
+				 return
+			}
+		}
+	}
+
 	buf := make([]byte, 512)
 	switch req.Method {
 	case http.MethodPost:
@@ -60,7 +70,7 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Add("Content-type", "application/dns-message")
+	w.Header().Add("Content-type", dnsMediaType)
 	if _, err := w.Write(resolved); err != nil {
 		log.Fatalln(err)
 	}
