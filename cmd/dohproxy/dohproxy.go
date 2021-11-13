@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"net/http"
 	"log"
+	"git.sr.ht/~otl/dns"
 //	"golang.org/x/net/dns/dnsmessage"
 )
 
 // https://quad9.net
 const quad9 string = "9.9.9.9:domain"
 const cloudflare string = "1.1.1.1:domain"
-const dnsMediaType string = "application/dns-message"
 
 func forward(msg []byte) ([]byte, error) {
 	fmt.Println("starting to resolve")
-	conn, err := net.Dial("udp", cloudflare)
+	conn, err := net.Dial("udp", quad9)
 	if err != nil {
 		return nil, err
 	}
@@ -37,11 +37,16 @@ func forward(msg []byte) ([]byte, error) {
 func dnsHandler(w http.ResponseWriter, req *http.Request) {
 	if v, ok := req.Header["Content-Type"]; ok {
 		for _, s := range v {
-			if s != dnsMediaType {
+			if s != dns.MediaType {
 				http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
 				 return
 			}
 		}
+	}
+
+	if req.Method != http.MethodPost && req.Method != http.MethodGet {
+		http.Error(w, "method must be GET or POST", http.StatusNotImplemented)
+		return
 	}
 
 	buf := make([]byte, 512)
@@ -59,9 +64,6 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 		log.Println("got a GET request but that's not implemented")
 		http.Error(w, "in progress!", http.StatusNotImplemented)
 		return
-	default:
-		http.Error(w, "method must be GET or POST", http.StatusNotImplemented)
-		return
 	}
 
 	resolved, err := forward(buf)
@@ -70,7 +72,7 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Add("Content-type", dnsMediaType)
+	w.Header().Add("Content-Type", dns.MediaType)
 	if _, err := w.Write(resolved); err != nil {
 		log.Fatalln(err)
 	}
