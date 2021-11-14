@@ -51,6 +51,20 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	if v, ok :- req.Header["Content-Length"]; ok {
+		for _, s := range v {
+			length, err := strconv.AtoI(s)
+			if err != nil {
+				http.Error(w, "parse Content-Length: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if length > dns.MaxMsgSize {
+				error = fmt.Sprintf("content length %d larger than permitted %d", length,dns.MaxMsgSize)
+				http.Error(w, error, http.StatusRequestEntityTooLarge)
+				return
+			}
+		}
+	}
 	if req.Method != http.MethodPost && req.Method != http.MethodGet {
 		http.Error(w, "method must be GET or POST", http.StatusNotImplemented)
 		return
