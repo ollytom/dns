@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"log"
+	"fmt"
+	"strconv"
 	"git.sr.ht/~otl/dns"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/net/dns/dnsmessage"
@@ -45,28 +47,36 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 	if v, ok := req.Header["Content-Type"]; ok {
 		for _, s := range v {
 			if s != dns.MediaType {
-				http.Error(w, "unsupported media type", http.StatusUnsupportedMediaType)
+				err := fmt.Errorf("unsupported media type %s", s)
+				log.Println(err.Error())
+				http.Error(w, err.Error(), http.StatusUnsupportedMediaType)
 				 return
 			}
 		}
 	}
 
-	if v, ok :- req.Header["Content-Length"]; ok {
+	if v, ok := req.Header["Content-Length"]; ok {
 		for _, s := range v {
-			length, err := strconv.AtoI(s)
+			length, err := strconv.Atoi(s)
 			if err != nil {
-				http.Error(w, "parse Content-Length: "+err.Error(), http.StatusInternalServerError)
+				err = fmt.Errorf("parse Content-Length: %v", err)
+				log.Println(err.Error())
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			if length > dns.MaxMsgSize {
-				error = fmt.Sprintf("content length %d larger than permitted %d", length,dns.MaxMsgSize)
-				http.Error(w, error, http.StatusRequestEntityTooLarge)
+				err = fmt.Errorf("content length %d larger than permitted %d", length, dns.MaxMsgSize)
+				log.Println(err.Error())
+				http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
 				return
 			}
 		}
 	}
+
 	if req.Method != http.MethodPost && req.Method != http.MethodGet {
-		http.Error(w, "method must be GET or POST", http.StatusNotImplemented)
+		err := fmt.Errorf("invalid HTTP method %s, must be GET or POST", req.Method)
+		log.Println(err.Error())
+		http.Error(w, err.Error(), http.StatusNotImplemented)
 		return
 	}
 
