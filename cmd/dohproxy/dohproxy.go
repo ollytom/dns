@@ -1,47 +1,20 @@
 package main
 
 import (
-	"net"
-	"io"
-	"net/http"
-	"log"
 	"fmt"
-	"strconv"
-	"git.sr.ht/~otl/dns"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/net/dns/dnsmessage"
+	"io"
+	"log"
+	"net/http"
+	"strconv"
+
+	"git.sr.ht/~otl/dns"
 )
 
 // https://quad9.net
 const quad9 string = "9.9.9.9:domain"
 const cloudflare string = "1.1.1.1:domain"
-
-func forward(msg dnsmessage.Message) (dnsmessage.Message, error) {
-	packed, err := msg.Pack()
-	if err != nil {
-		return dnsmessage.Message{}, err
-	}
-
-	conn, err := net.Dial("udp", quad9)
-	if err != nil {
-		return dnsmessage.Message{}, err
-	}
-	defer conn.Close()
-	if _, err := conn.Write(packed); err != nil {
-		return dnsmessage.Message{}, err
-	}
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
-	if err != nil {
-		return dnsmessage.Message{}, err
-	}
-
-	var rmsg dnsmessage.Message
-	if err := rmsg.Unpack(buf[:n]); err != nil {
-		return dnsmessage.Message{}, err
-	}
-	return rmsg, nil
-}
 
 func dnsHandler(w http.ResponseWriter, req *http.Request) {
 	if v, ok := req.Header["Content-Type"]; ok {
@@ -50,7 +23,7 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 				err := fmt.Errorf("unsupported media type %s", s)
 				log.Println(err.Error())
 				http.Error(w, err.Error(), http.StatusUnsupportedMediaType)
-				 return
+				return
 			}
 		}
 	}
@@ -101,7 +74,7 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "unpack query: "+err.Error(), http.StatusInternalServerError)
 	}
 
-	resolved, err := forward(msg)
+	resolved, err := dns.Exchange(msg, quad9)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
