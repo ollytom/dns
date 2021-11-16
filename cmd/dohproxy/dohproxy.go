@@ -84,6 +84,7 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Println("pack resolved query:", err.Error)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	w.Header().Add("Content-Type", dns.MediaType)
 	if _, err := w.Write(packed); err != nil {
