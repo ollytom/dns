@@ -40,15 +40,17 @@ func send(msg dnsmessage.Message, conn net.Conn) (dnsmessage.Message, error) {
 	if err != nil {
 		return dnsmessage.Message{}, err
 	}
+	var b []byte
 	if _, ok := conn.(net.PacketConn); ok {
-		b, err := dnsPacketExchange(packed, conn)
+		b, err = dnsPacketExchange(packed, conn)
 		if err != nil {
 			return dnsmessage.Message{}, fmt.Errorf("exchange DNS packet: %v", err)
 		}
 	} else {
-		b, err := dnsStreamExchange(packed, conn)
+		b, err = dnsStreamExchange(packed, conn)
 		if err != nil {
 			return dnsmessage.Message{}, fmt.Errorf("exchange DNS TCP stream: %v", err)
+		}
 	}
 	var rmsg dnsmessage.Message
 	if err := rmsg.Unpack(b); err != nil {
