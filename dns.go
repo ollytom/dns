@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"net"
 
 	"golang.org/x/net/dns/dnsmessage"
@@ -42,36 +41,50 @@ func send(msg dnsmessage.Message, conn net.Conn) (dnsmessage.Message, error) {
 		return dnsmessage.Message{}, err
 	}
 	if _, ok := conn.(net.PacketConn); ok {
-		if _, err = conn.Write(packed); err != nil {
-			return dnsmessage.Message{}, err
+		b, err := dnsPacketExchange(packed, conn)
+		if err != nil {
+			return dnsmessage.Message{}, fmt.Errorf("exchange DNS packet: %v", err)
 		}
 	} else {
-		// DNS over TCP requires you to prepend the message with a
-		// 2-octet length field.
-		m := make([]byte, 2+len(packed))
-		binary.BigEndian.PutUint16(m, uint16(len(packed)))
-		copy(m[2:], packed)
-		if _, err = conn.Write(m); err != nil {
-			return dnsmessage.Message{}, err
-		}
+		b, err := dnsStreamExchange(packed, conn)
+		if err != nil {
+			return dnsmessage.Message{}, fmt.Errorf("exchange DNS TCP stream: %v", err)
+	}
+	var rmsg dnsmessage.Message
+	if err := rmsg.Unpack(b); err != nil {
+		return dnsmessage.Message{}, fmt.Errorf("parse response: %v", err)
+	}
+	return rmsg, nil
+}
+
+func dnsPacketExchange(b []byte, conn net.Conn) ([]byte, error) {
+	if _, err := conn.Write(b); err != nil {
+		return nil, err
+	}
+	buf := make([]byte, 512) // max UDP size per RFC?
+	n, err := conn.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	return buf[:n], nil
+}
+
+func dnsStreamExchange(b []byte, conn net.Conn) ([]byte, error) {
+	// DNS over TCP requires you to prepend the message with a
+	// 2-octet length field.
+	m := make([]byte, 2+len(b))
+	binary.BigEndian.PutUint16(m, uint16(len(b)))
+	copy(m[2:], b)
+	if _, err := conn.Write(m); err != nil {
+		return nil, err
 	}
 	buf := make([]byte, 1024)
 	n, err := conn.Read(buf)
-	if err != nil && err != io.EOF {
-		return dnsmessage.Message{}, err
+	if err != nil {
+		return nil, err
 	}
 	if n == 0 {
-		return dnsmessage.Message{}, fmt.Errorf("empty response")
+		return nil, fmt.Errorf("empty response")
 	}
-	var rmsg dnsmessage.Message
-	if _, ok := conn.(net.PacketConn); ok {
-		if err := rmsg.Unpack(buf[:n]); err != nil {
-			return dnsmessage.Message{}, fmt.Errorf("parse response: %v", err)
-		}
-	} else {
-		if err := rmsg.Unpack(buf[2:n]); err != nil {
-			return dnsmessage.Message{}, fmt.Errorf("parse response: %v", err)
-		}
-	}
-	return rmsg, nil
+	return buf[2:n], nil
 }
