@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"git.sr.ht/~otl/dns"
@@ -74,7 +75,13 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "unpack query: "+err.Error(), http.StatusInternalServerError)
 	}
 
-	resolved, err := dns.Exchange(msg, quad9)
+	var resolved dnsmessage.Message
+	var err error
+	if conf.usetls {
+		resolved, err = dns.ExchangeTLS(msg, conf.forwardaddr)
+	} else {
+		resolved, err = dns.Exchange(msg, conf.forwardaddr)
+	}
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -92,7 +99,15 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+var conf config
+
 func main() {
+	var err error
+	conf, err = configFromFile("dohproxy.conf")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "read configuration:", err)
+		os.Exit(1)
+	}
 	http.HandleFunc("/dns-query", dnsHandler)
-	log.Fatalln(http.Serve(autocert.NewListener("syd.olowe.co"), nil))
+	log.Fatalln(http.Serve(autocert.NewListener(conf.listenaddr), nil))
 }
