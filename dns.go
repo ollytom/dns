@@ -3,6 +3,7 @@ package dns
 import (
 	"crypto/tls"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 
@@ -12,6 +13,8 @@ import (
 // https://datatracker.ietf.org/doc/html/rfc8484
 const MediaType string = "application/dns-message"
 const MaxMsgSize int = 65535 // max size of a message in bytes
+
+var errMismatchedID = errors.New("mismatched message id")
 
 // Exchange performs a synchronous, unencrypted UDP DNS exchange with addr and returns its
 // reply to msg.
@@ -44,17 +47,20 @@ func send(msg dnsmessage.Message, conn net.Conn) (dnsmessage.Message, error) {
 	if _, ok := conn.(net.PacketConn); ok {
 		b, err = dnsPacketExchange(packed, conn)
 		if err != nil {
-			return dnsmessage.Message{}, fmt.Errorf("exchange DNS packet: %v", err)
+			return dnsmessage.Message{}, fmt.Errorf("exchange DNS packet: %w", err)
 		}
 	} else {
 		b, err = dnsStreamExchange(packed, conn)
 		if err != nil {
-			return dnsmessage.Message{}, fmt.Errorf("exchange DNS TCP stream: %v", err)
+			return dnsmessage.Message{}, fmt.Errorf("exchange DNS TCP stream: %w", err)
 		}
 	}
 	var rmsg dnsmessage.Message
 	if err := rmsg.Unpack(b); err != nil {
 		return dnsmessage.Message{}, fmt.Errorf("parse response: %v", err)
+	}
+	if rmsg.Header.ID != msg.Header.ID {
+		return rmsg, errMismatchedID
 	}
 	return rmsg, nil
 }
