@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 
 	"golang.org/x/net/dns/dnsmessage"
@@ -86,13 +87,9 @@ func dnsStreamExchange(b []byte, conn net.Conn) ([]byte, error) {
 	if _, err := conn.Write(m); err != nil {
 		return nil, err
 	}
-	buf := make([]byte, 1024)
-	n, err := conn.Read(buf)
+	buf, err := io.ReadAll(conn)
 	if err != nil {
 		return nil, err
 	}
-	if n == 0 {
-		return nil, fmt.Errorf("empty response")
-	}
-	return buf[2:n], nil
+	return buf[2:], nil
 }
