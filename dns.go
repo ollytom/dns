@@ -2,7 +2,6 @@ package dns
 
 import (
 	"crypto/tls"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -81,8 +80,10 @@ func dnsPacketExchange(b []byte, conn net.Conn) ([]byte, error) {
 func dnsStreamExchange(b []byte, conn net.Conn) ([]byte, error) {
 	// DNS over TCP requires you to prepend the message with a
 	// 2-octet length field.
-	m := make([]byte, 2+len(b))
-	binary.BigEndian.PutUint16(m, uint16(len(b)))
+	l := len(b)
+	m := make([]byte, 2+l)
+	m[0] = byte(l >> 8)
+	m[1] = byte(l)
 	copy(m[2:], b)
 	if _, err := conn.Write(m); err != nil {
 		return nil, err
@@ -92,7 +93,7 @@ func dnsStreamExchange(b []byte, conn net.Conn) ([]byte, error) {
 	if _, err := io.ReadFull(conn, b[:2]); err != nil {
 		return nil, fmt.Errorf("read length: %w", err)
 	}
-	l := int(b[0])<<8 | int(b[1])
+	l = int(b[0])<<8 | int(b[1])
 	if l > len(b) {
 		b = make([]byte, l)
 	}
