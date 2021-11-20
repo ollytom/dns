@@ -13,10 +13,6 @@ import (
 	"git.sr.ht/~otl/dns"
 )
 
-// https://quad9.net
-const quad9 string = "9.9.9.9:domain"
-const cloudflare string = "1.1.1.1:domain"
-
 func dnsHandler(w http.ResponseWriter, req *http.Request) {
 	if v, ok := req.Header["Content-Type"]; ok {
 		for _, s := range v {
@@ -54,10 +50,12 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	buf := make([]byte, 512)
+	buf := make([]byte, dns.MaxMsgSize)
+	var n int
+	var err error
 	switch req.Method {
 	case http.MethodPost:
-		_, err := req.Body.Read(buf)
+		n, err = req.Body.Read(buf)
 		if err != nil && err != io.EOF {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -70,13 +68,12 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var msg dnsmessage.Message
-	if err := msg.Unpack(buf); err != nil {
+	if err := msg.Unpack(buf[:n]); err != nil {
 		log.Println("unpack query:", err)
 		http.Error(w, "unpack query: "+err.Error(), http.StatusInternalServerError)
 	}
 
 	var resolved dnsmessage.Message
-	var err error
 	if conf.usetls {
 		resolved, err = dns.ExchangeTLS(msg, conf.forwardaddr)
 	} else {
@@ -89,7 +86,7 @@ func dnsHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	packed, err := resolved.Pack()
 	if err != nil {
-		log.Println("pack resolved query:", err.Error)
+		log.Println("pack resolved query:", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
