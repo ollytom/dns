@@ -87,9 +87,18 @@ func dnsStreamExchange(b []byte, conn net.Conn) ([]byte, error) {
 	if _, err := conn.Write(m); err != nil {
 		return nil, err
 	}
-	buf, err := io.ReadAll(conn)
-	if err != nil {
-		return nil, err
+
+	b = make([]byte, 1280)
+	if _, err := io.ReadFull(conn, b[:2]); err != nil {
+		return nil, fmt.Errorf("read length: %w", err)
 	}
-	return buf[2:], nil
+	l := int(b[0])<<8 | int(b[1])
+	if l > len(b) {
+		b = make([]byte, l)
+	}
+	n, err := io.ReadFull(conn, b[:l])
+	if err != nil {
+		return nil, fmt.Errorf("read after length: %w", err)
+	}
+	return b[:n], nil
 }
