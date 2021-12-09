@@ -31,6 +31,9 @@ type ResponseWriter interface {
 type Handler func(ResponseWriter, *dnsmessage.Message)
 
 func (srv *Server) ServePacket(conn net.PacketConn) error {
+	if srv.handler == nil {
+		srv.handler = DefaultHandler
+	}
 	for {
 		buf := make([]byte, 512)
 		n, raddr, err := conn.ReadFrom(buf)
@@ -53,29 +56,46 @@ func (srv *Server) ServePacket(conn net.PacketConn) error {
 
 func (srv *Server) Serve(l net.Listener) error {
 	defer l.Close()
+	if srv.handler == nil {
+		srv.handler = DefaultHandler
+	}
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			return err
 		}
 		msg, _ := receive(conn)
-		go func() {
-			resp := &response{conn: conn}
-			srv.handler(resp, &msg)
-		}()
+		resp := &response{conn: conn}
+		go srv.handler(resp, &msg)
 	}
 }
 
+func ServePacket(conn net.PacketConn, handler Handler) error {
+	srv := &Server{handler: handler}
+	return srv.ServePacket(conn)
+}
+
+func Serve(l net.Listener, handler Handler) error {
+	srv := &Server{handler: handler}
+	return srv.Serve(l)
+}
+
 func (srv *Server) ListenAndServe() error {
-	switch srv.network {
-	case "udp", "udp4", "udp6", "unixgram":
-		conn, err := net.ListenPacket(srv.network, srv.addr)
+	if srv.addr == "" {
+		srv.addr = ":53"
+	}
+	switch nw := srv.network; nw {
+	case "", "udp", "udp4", "udp6", "unixgram":
+		if nw == "" {
+			nw = "udp"
+		}
+		conn, err := net.ListenPacket(nw, srv.addr)
 		if err != nil {
 			return err
 		}
 		return srv.ServePacket(conn)
 	default:
-		l, err := net.Listen(srv.network, srv.addr)
+		l, err := net.Listen(nw, srv.addr)
 		if err != nil {
 			return err
 		}
@@ -88,7 +108,7 @@ func ListenAndServe(network, addr string, handler Handler) error {
 	return srv.ListenAndServe()
 }
 
-func dumbHandler(w ResponseWriter, msg *dnsmessage.Message) {
+func DefaultHandler(w ResponseWriter, msg *dnsmessage.Message) {
 	var rmsg dnsmessage.Message
 	rmsg.Header.ID = msg.Header.ID
 	if msg.Header.RecursionDesired {
