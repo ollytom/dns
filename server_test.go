@@ -6,9 +6,7 @@ import (
 
 func TestServer(t *testing.T) {
 	go func() {
-		if err := ListenAndServe("udp", "127.0.0.1:51111", nil); err != nil {
-			t.Fatal(err)
-		}
+		t.Fatal(ListenAndServe("udp", "127.0.0.1:51111", nil))
 	}()
 	q, err := buildmsg("www.example.com.")
 	if err != nil {
@@ -23,9 +21,7 @@ func TestServer(t *testing.T) {
 
 func TestStreamServer(t *testing.T) {
 	go func() {
-		if err := ListenAndServe("tcp", "127.0.0.1:51112", nil); err != nil {
-			t.Fatal(err)
-		}
+		t.Fatal(ListenAndServe("tcp", "127.0.0.1:51112", nil))
 	}()
 	q, err := buildmsg("www.example.com.")
 	if err != nil {
