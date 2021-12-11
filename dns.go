@@ -1,3 +1,43 @@
+/*
+Package dns provides small DNS client and server implementations built
+around the Go project's dnsmessage package. It supports both UDP and
+TCP (including TLS).
+
+The package deliberately does not implement all features of the DNS
+specifications. Notably EDNS and DNSSEC are unsupported.
+
+TODO(otl): use documentation-reserved IP addresses.
+The most basic operation is creating a DNS message, sending it to a
+DNS server, then handling the reply using Exchange:
+
+	qmsg := dnsmessage.Message{
+		Header: dnsmessage.Header{ID: 1},
+		Questions: []dnsmessage.Question{
+			// ...
+		},
+	}
+	rmsg, err := Exchange(qmsg, "9.9.9.9:domain")
+	// ...
+
+Queries to a recursive resolver via DNS over TLS (DoT) can be made with ExchangeTLS:
+
+	name, err := dnsmessage.NewName("www.example.com.")
+	if err != nil {
+		// handle error
+	}
+	qmsg := dnsmessage.Message{
+		Header: dnsmessage.Header{ID: 69, RecursionDesired: true},
+		Questions: []dnsmessage.Question{
+			dnsmessage.Question{
+				Name: name,
+				Type: dnsmessage.TypeA,
+				Class: dnsmessage.ClassINET,
+			},
+		},
+	}
+	rmsg, err := ExchangeTLS(qmsg, "9.9.9.9:853")
+
+*/
 package dns
 
 import (
