@@ -116,7 +116,7 @@ func ListenAndServe(network, addr string, handler Handler) error {
 	return srv.ListenAndServe()
 }
 
-// DefaultHandler responds to the DNS message identically. Recursive
+// DefaultHandler responds to all DNS messages identically. Recursivew
 // queries are refused and all others are replied to with a "not
 // implemented" message. It is intended as a safe default for a Server
 // which does not set a Handler.
