@@ -5,10 +5,13 @@ import (
 	"net"
 )
 
+// Server contains settings for running a DNS server.
 type Server struct {
 	network string
 	addr    string
-	handler Handler
+	// Handler is the function which responds to each DNS request
+	// received by the server.
+	Handler Handler
 }
 
 type response struct {
@@ -24,15 +27,20 @@ func (r *response) WriteMsg(msg dnsmessage.Message) error {
 	return send(msg, r.conn)
 }
 
+// The ResponseWriter interface is used by a Handler to reply to
+// DNS requests.
 type ResponseWriter interface {
+	// WriteMsg writes the DNS message to the connection.
 	WriteMsg(dnsmessage.Message) error
 }
 
+// A Handler responds to a DNS message. The function should write a reply
+// message to ResponseWriter then return.
 type Handler func(ResponseWriter, *dnsmessage.Message)
 
 func (srv *Server) ServePacket(conn net.PacketConn) error {
-	if srv.handler == nil {
-		srv.handler = DefaultHandler
+	if srv.Handler == nil {
+		srv.Handler = DefaultHandler
 	}
 	for {
 		buf := make([]byte, 512)
@@ -48,7 +56,7 @@ func (srv *Server) ServePacket(conn net.PacketConn) error {
 				return
 			}
 			resp := &response{raddr: raddr, pconn: conn}
-			srv.handler(resp, &msg)
+			srv.Handler(resp, &msg)
 		}()
 	}
 	return nil
@@ -56,8 +64,8 @@ func (srv *Server) ServePacket(conn net.PacketConn) error {
 
 func (srv *Server) Serve(l net.Listener) error {
 	defer l.Close()
-	if srv.handler == nil {
-		srv.handler = DefaultHandler
+	if srv.Handler == nil {
+		srv.Handler = DefaultHandler
 	}
 	for {
 		conn, err := l.Accept()
@@ -66,17 +74,17 @@ func (srv *Server) Serve(l net.Listener) error {
 		}
 		msg, _ := receive(conn)
 		resp := &response{conn: conn}
-		go srv.handler(resp, &msg)
+		go srv.Handler(resp, &msg)
 	}
 }
 
 func ServePacket(conn net.PacketConn, handler Handler) error {
-	srv := &Server{handler: handler}
+	srv := &Server{Handler: handler}
 	return srv.ServePacket(conn)
 }
 
 func Serve(l net.Listener, handler Handler) error {
-	srv := &Server{handler: handler}
+	srv := &Server{Handler: handler}
 	return srv.Serve(l)
 }
 
@@ -104,10 +112,14 @@ func (srv *Server) ListenAndServe() error {
 }
 
 func ListenAndServe(network, addr string, handler Handler) error {
-	srv := &Server{network: network, addr: addr, handler: handler}
+	srv := &Server{network: network, addr: addr, Handler: handler}
 	return srv.ListenAndServe()
 }
 
+// DefaultHandler responds to the DNS message identically. Recursive
+// queries are refused and all others are replied to with a "not
+// implemented" message. It is intended as a safe default for a Server
+// which does not set a Handler.
 func DefaultHandler(w ResponseWriter, msg *dnsmessage.Message) {
 	var rmsg dnsmessage.Message
 	rmsg.Header.ID = msg.Header.ID
