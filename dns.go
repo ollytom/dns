@@ -16,7 +16,7 @@ DNS server, then handling the reply using Exchange:
 			// ...
 		},
 	}
-	rmsg, err := Exchange(qmsg, "9.9.9.9:domain")
+	rmsg, err := dns.Exchange(qmsg, "9.9.9.9:domain")
 	// ...
 
 Queries to a recursive resolver via DNS over TLS (DoT) can be made with ExchangeTLS:
@@ -35,7 +35,34 @@ Queries to a recursive resolver via DNS over TLS (DoT) can be made with Exchange
 			},
 		},
 	}
-	rmsg, err := ExchangeTLS(qmsg, "9.9.9.9:853")
+	rmsg, err := dns.ExchangeTLS(qmsg, "9.9.9.9:853")
+
+ListenAndServe starts a DNS server listening on the given network and
+address. Received messages are managed with the given Handler in a new
+goroutine. Handler may be nil, in which case all messages are
+gracefully refused.
+
+	log.Fatal(dns.ListenAndServe("udp", ":domain", nil))
+
+Handlers are just functions to which a DNS message from the server is
+passed. Responses are written to ResponseWriter.
+
+	func myHandler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
+		var rmsg dnsmessage.Message
+		rmsg.Header.ID = qmsg.Header.ID
+		if rmsg.Header.RecursionDesired {
+			rmsg.Header.RCode = dnsmessage.RCodeRefused
+			w.WriteMsg(rmsg)
+			return
+		}
+		// answer questions...
+	}
+
+A Server may be created with a custom net.Listener:
+
+	l, err := tls.Listen(network, addr, config)
+	srv := &dns.Server{Handler: myHandler}
+	log.Fatal(srv.Serve(l))
 
 */
 package dns

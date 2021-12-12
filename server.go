@@ -5,7 +5,8 @@ import (
 	"net"
 )
 
-// Server contains settings for running a DNS server.
+// Server contains settings for running a DNS server. An empty Server
+// with a nil Handler is a valid configuration.
 type Server struct {
 	network string
 	addr    string
