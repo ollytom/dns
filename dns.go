@@ -6,7 +6,6 @@ TCP (including TLS).
 The package deliberately does not implement all features of the DNS
 specifications. Notably EDNS and DNSSEC are unsupported.
 
-TODO(otl): use documentation-reserved IP addresses.
 The most basic operation is creating a DNS message, sending it to a
 DNS server, then handling the reply using Exchange:
 
@@ -16,7 +15,7 @@ DNS server, then handling the reply using Exchange:
 			// ...
 		},
 	}
-	rmsg, err := dns.Exchange(qmsg, "9.9.9.9:domain")
+	rmsg, err := dns.Exchange(qmsg, "192.0.2.1:domain")
 	// ...
 
 Queries to a recursive resolver via DNS over TLS (DoT) can be made with ExchangeTLS:
@@ -35,7 +34,7 @@ Queries to a recursive resolver via DNS over TLS (DoT) can be made with Exchange
 			},
 		},
 	}
-	rmsg, err := dns.ExchangeTLS(qmsg, "9.9.9.9:853")
+	rmsg, err := dns.ExchangeTLS(qmsg, "192.0.2.1:853")
 
 ListenAndServe starts a DNS server listening on the given network and
 address. Received messages are managed with the given Handler in a new
