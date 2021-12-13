@@ -93,18 +93,18 @@ func (srv *Server) ListenAndServe() error {
 	if srv.addr == "" {
 		srv.addr = ":53"
 	}
-	switch nw := srv.network; nw {
+	switch srv.network {
 	case "", "udp", "udp4", "udp6", "unixgram":
-		if nw == "" {
-			nw = "udp"
+		if srv.network == "" {
+			srv.network = "udp"
 		}
-		conn, err := net.ListenPacket(nw, srv.addr)
+		conn, err := net.ListenPacket(srv.network, srv.addr)
 		if err != nil {
 			return err
 		}
 		return srv.ServePacket(conn)
 	default:
-		l, err := net.Listen(nw, srv.addr)
+		l, err := net.Listen(srv.network, srv.addr)
 		if err != nil {
 			return err
 		}
