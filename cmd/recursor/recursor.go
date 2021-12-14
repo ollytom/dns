@@ -24,13 +24,8 @@ func isIPv6(ip net.IP) bool {
 }
 
 // appends the DNS port to the IP to be used in a dial string.
-// If IP is IPv6 address, it is wrapped in square brackets ("[" and "]").
 func ip2dial(ip net.IP) string {
-	s := ip.String()
-	if isIPv6(ip) {
-		return "["+s+"]:domain"
-	}
-	return s+":domain"
+	return net.JoinHostPort(ip.String(), "domain")
 }
 
 func newID() uint16 {
