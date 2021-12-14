@@ -59,7 +59,7 @@ func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 		}
 		fmt.Fprintf(os.Stderr, "asking %s about %s\n", ip, q.Name)
 		rmsg, err = dns.Exchange(qmsg, ip2dial(ip))
-		if rmsg.Header.RCode == dnsmessage.RCodeNameError {
+		if rmsg.Header.Authoritative {
 			return rmsg, err
 		} else if rmsg.Header.RCode == dnsmessage.RCodeSuccess && err == nil {
 			break
@@ -67,9 +67,6 @@ func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 	}
 	if err != nil {
 		return dnsmessage.Message{}, fmt.Errorf("resolve %s: %w", q.Name, err)
-	}
-	if len(rmsg.Answers) > 0 {
-		return rmsg, nil
 	}
 
 	fmt.Fprintf(os.Stderr, "no answer for %s %s, checking additionals\n", q.Name, q.Type)
