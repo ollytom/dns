@@ -145,18 +145,17 @@ func handler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
 	}
 	rmsg.Header.RCode = resolved.Header.RCode
 	rmsg.Answers = resolved.Answers
+	cache.Lock()
+	cache.m[q] = rmsg.Answers
+	fmt.Fprintf(os.Stderr, "cached %s %s\n", q.Name, q.Type)
+	cache.Unlock()
 	if len(rmsg.Answers) == 0 {
 		rmsg.Authorities = resolved.Authorities
 		w.WriteMsg(rmsg)
-		fmt.Fprintf(os.Stderr, "finished %s %s\n", q.Name, q.Type)
 		return
 	}
 	rmsg.Answers = resolved.Answers
 	w.WriteMsg(rmsg)
-	cache.Lock()
-	cache.m[q] = rmsg.Answers
-	fmt.Fprintf(os.Stderr, "added %s %s to cache\n", q.Name, q.Type)
-	cache.Unlock()
 }
 
 var cache = struct{
