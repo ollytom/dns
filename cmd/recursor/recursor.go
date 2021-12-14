@@ -59,24 +59,14 @@ func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 		}
 		fmt.Fprintf(os.Stderr, "asking %s about %s\n", ip, q.Name)
 		rmsg, err = dns.Exchange(qmsg, ip2dial(ip))
-		if rmsg.Header.RCode == dnsmessage.RCodeServerFailure {
-			fmt.Fprintf(os.Stderr, "resolve %s: temp srv fail from %s\n", q.Name, ip)
-			continue
-		}
-		if rmsg.Header.RCode == dnsmessage.RCodeRefused {
-			fmt.Fprintf(os.Stderr, "resolve %s: refused from %s\n", q.Name, ip)
-			continue
-		}
-		if err == nil {
+		if rmsg.Header.RCode == dnsmessage.RCodeNameError {
+			return rmsg, err
+		} else if rmsg.Header.RCode == dnsmessage.RCodeSuccess && err == nil {
 			break
 		}
 	}
 	if err != nil {
 		return dnsmessage.Message{}, fmt.Errorf("resolve %s: %w", q.Name, err)
-	}
-
-	if rmsg.Header.RCode == dnsmessage.RCodeNameError {
-		return rmsg, nil
 	}
 	if len(rmsg.Answers) > 0 {
 		return rmsg, nil
@@ -170,7 +160,6 @@ func handler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
 	cache.m[q] = rmsg.Answers
 	fmt.Fprintf(os.Stderr, "added %s %s to cache\n", q.Name, q.Type)
 	cache.Unlock()
-	fmt.Fprintf(os.Stderr, "finished %s %s\n", q.Name, q.Type)
 }
 
 var cache = struct{
