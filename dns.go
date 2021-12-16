@@ -189,6 +189,15 @@ func send(msg dnsmessage.Message, conn net.Conn) error {
 	return nil
 }
 
+func sendPacket(msg dnsmessage.Message, conn net.PacketConn, addr net.Addr) error {
+	packed, err := msg.Pack()
+	if err != nil {
+		return err
+	}
+	_, err = conn.WriteTo(packed, addr)
+	return err
+}
+
 func receive(conn net.Conn) (dnsmessage.Message, error) {
 	var buf []byte
 	var n int
@@ -218,16 +227,4 @@ func receive(conn net.Conn) (dnsmessage.Message, error) {
 		return dnsmessage.Message{}, err
 	}
 	return msg, nil
-}
-
-func sendPacket(msg dnsmessage.Message, conn net.PacketConn, addr net.Addr) error {
-	packed, err := msg.Pack()
-	if err != nil {
-		return err
-	}
-	_, err = conn.WriteTo(packed, addr)
-	if err != nil {
-		return err
-	}
-	return nil
 }
