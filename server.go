@@ -5,6 +5,12 @@ import (
 	"net"
 )
 
+type Zone struct {
+	Name dnsmessage.Name
+	SOA dnsmessage.SOAResource
+	Resources []dnsmessage.Resource
+}
+
 // Server contains settings for running a DNS server. An empty Server
 // with a nil Handler is a valid configuration.
 type Server struct {
@@ -21,16 +27,25 @@ type response struct {
 	conn  net.Conn
 }
 
+func (r *response) Write(p []byte) (n int, err error) {
+	if r.pconn != nil {
+		return r.pconn.WriteTo(p, r.raddr)
+	}
+	return send(p, r.conn)
+}
+
 func (r *response) WriteMsg(msg dnsmessage.Message) error {
 	if r.pconn != nil {
-		return sendPacket(msg, r.pconn, r.raddr)
+		return sendMsgTo(msg, r.pconn, r.raddr)
 	}
-	return send(msg, r.conn)
+	return sendMsg(msg, r.conn)
 }
 
 // The ResponseWriter interface is used by a Handler to reply to
 // DNS requests.
 type ResponseWriter interface {
+	// Write writes the data to the underlying connection as a DNS response.
+	Write(p []byte) (n int, err error)
 	// WriteMsg writes the DNS message to the connection.
 	WriteMsg(dnsmessage.Message) error
 }
@@ -53,7 +68,7 @@ func (srv *Server) ServePacket(conn net.PacketConn) error {
 			var msg dnsmessage.Message
 			if err := msg.Unpack(buf[:n]); err != nil {
 				msg.Header.RCode = dnsmessage.RCodeRefused
-				sendPacket(msg, conn, raddr)
+				sendMsgTo(msg, conn, raddr)
 				return
 			}
 			resp := &response{raddr: raddr, pconn: conn}

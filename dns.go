@@ -152,7 +152,7 @@ func ExchangeTLS(msg dnsmessage.Message, addr string) (dnsmessage.Message, error
 }
 
 func exchange(msg dnsmessage.Message, conn net.Conn) (dnsmessage.Message, error) {
-	if err := send(msg, conn); err != nil {
+	if err := sendMsg(msg, conn); err != nil {
 		return dnsmessage.Message{}, err
 	}
 	rmsg, err := receive(conn)
@@ -165,31 +165,30 @@ func exchange(msg dnsmessage.Message, conn net.Conn) (dnsmessage.Message, error)
 	return rmsg, nil
 }
 
-func send(msg dnsmessage.Message, conn net.Conn) error {
+func sendMsg(msg dnsmessage.Message, conn net.Conn) error {
 	packed, err := msg.Pack()
 	if err != nil {
 		return err
 	}
+	_, err = send(packed, conn)
+	return err
+}
+
+func send(p []byte, conn net.Conn) (int, error) {
 	if _, ok := conn.(net.PacketConn); ok {
-		if _, err := conn.Write(packed); err != nil {
-			return err
-		}
-		return nil
+		return conn.Write(p)
 	}
 	// DNS over TCP requires you to prepend the message with a
 	// 2-octet length field.
-	l := len(packed)
+	l := len(p)
 	m := make([]byte, 2+l)
 	m[0] = byte(l >> 8)
 	m[1] = byte(l)
-	copy(m[2:], packed)
-	if _, err := conn.Write(m); err != nil {
-		return err
-	}
-	return nil
+	copy(m[2:], p)
+	return conn.Write(m)
 }
 
-func sendPacket(msg dnsmessage.Message, conn net.PacketConn, addr net.Addr) error {
+func sendMsgTo(msg dnsmessage.Message, conn net.PacketConn, addr net.Addr) error {
 	packed, err := msg.Pack()
 	if err != nil {
 		return err
