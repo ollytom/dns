@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"golang.org/x/net/dns/dnsmessage"
 	"testing"
 )
 
@@ -8,11 +9,8 @@ func TestServer(t *testing.T) {
 	go func() {
 		t.Fatal(ListenAndServe("udp", "127.0.0.1:51111", nil))
 	}()
-	q, err := buildmsg("www.example.com.")
-	if err != nil {
-		t.Fatalf("create query: %v", err)
-	}
-	rmsg, err := Exchange(q, "127.0.0.1:51111")
+	q := dnsmessage.Question{Name: dnsmessage.MustNewName("www.example.com."), Type: dnsmessage.TypeA, Class: dnsmessage.ClassINET}
+	rmsg, err := Ask(q, "127.0.0.1:51111")
 	if err != nil {
 		t.Errorf("exchange: %v", err)
 	}
@@ -23,11 +21,8 @@ func TestStreamServer(t *testing.T) {
 	go func() {
 		t.Fatal(ListenAndServe("tcp", "127.0.0.1:51112", nil))
 	}()
-	q, err := buildmsg("www.example.com.")
-	if err != nil {
-		t.Fatal("create query:", err)
-	}
-	rmsg, err := ExchangeTCP(q, "127.0.0.1:51112")
+	q := dnsmessage.Question{Name: dnsmessage.MustNewName("www.example.com."), Type: dnsmessage.TypeA, Class: dnsmessage.ClassINET}
+	rmsg, err := AskTCP(q, "127.0.0.1:51112")
 	if err != nil {
 		t.Errorf("exchange: %v", err)
 	}
@@ -40,11 +35,8 @@ func TestEmptyServer(t *testing.T) {
 		t.Fatal(srv.ListenAndServe())
 		t.Log(srv.addr)
 	}()
-	q, err := buildmsg("www.example.com.")
-	if err != nil {
-		t.Fatal("create query:", err)
-	}
-	rmsg, err := Exchange(q, "127.0.0.1:domain")
+	q := dnsmessage.Question{Name: dnsmessage.MustNewName("www.example.com."), Type: dnsmessage.TypeA, Class: dnsmessage.ClassINET}
+	rmsg, err := Ask(q, "127.0.0.1:domain")
 	if err != nil {
 		t.Errorf("exchange: %v", err)
 	}

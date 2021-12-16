@@ -6,8 +6,6 @@ import (
 	"net"
 	"strings"
 	"sync"
-	"time"
-	"math/rand"
 	"golang.org/x/net/dns/dnsmessage"
 	"olowe.co/dns"
 )
@@ -28,10 +26,6 @@ func ip2dial(ip net.IP) string {
 	return net.JoinHostPort(ip.String(), "domain")
 }
 
-func newID() uint16 {
-	return uint16(rand.Intn(65535))
-}
-
 func nextServerAddrs(resources []dnsmessage.Resource) []net.IP {
 	var next []net.IP
 	for _, r := range resources {
@@ -46,10 +40,6 @@ func nextServerAddrs(resources []dnsmessage.Resource) []net.IP {
 }
 
 func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
-	qmsg := dnsmessage.Message{
-		Header: dnsmessage.Header{ID: newID()},
-		Questions: []dnsmessage.Question{q},
-	}
 	var rmsg dnsmessage.Message
 	var err error
 	for _, ip := range next {
@@ -58,7 +48,7 @@ func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 			continue
 		}
 		fmt.Fprintf(os.Stderr, "asking %s about %s\n", ip, q.Name)
-		rmsg, err = dns.Exchange(qmsg, ip2dial(ip))
+		rmsg, err = dns.Ask(q, ip2dial(ip))
 		if rmsg.Header.Authoritative {
 			return rmsg, err
 		} else if rmsg.Header.RCode == dnsmessage.RCodeSuccess && err == nil {
@@ -134,7 +124,7 @@ func handler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
 		fmt.Fprintf(os.Stderr, "cache served %s %s\n", q.Name, q.Type)
 		return
 	}
-	cache.RUnlock() 
+	cache.RUnlock()
 
 	resolved, err := resolveFromRoot(q)
 	if err != nil {
@@ -164,6 +154,5 @@ var cache = struct{
 }{m: make(map[dnsmessage.Question][]dnsmessage.Resource)}
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	fmt.Fprintln(os.Stderr, dns.ListenAndServe("udp", "", handler))
 }

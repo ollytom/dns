@@ -71,7 +71,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
+	"time"
 
 	"golang.org/x/net/dns/dnsmessage"
 )
@@ -81,6 +83,42 @@ const MediaType string = "application/dns-message"
 const MaxMsgSize int = 65535 // max size of a message in bytes
 
 var errMismatchedID = errors.New("mismatched message id")
+
+var randomsrc *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func newID() uint16 {
+	return uint16(randomsrc.Intn(65535))
+}
+
+// Ask sends a message with q to addr and returns its response.
+// The exchange is unencrypted using UDP.
+func Ask(q dnsmessage.Question, addr string) (dnsmessage.Message, error) {
+	qmsg := dnsmessage.Message{
+		Header: dnsmessage.Header{ID: newID()},
+		Questions: []dnsmessage.Question{q},
+	}
+	return Exchange(qmsg, addr)
+}
+
+// Ask sends a message with q to addr and returns its response.
+// The exchange is unencrypted using TCP.
+func AskTCP(q dnsmessage.Question, addr string) (dnsmessage.Message, error) {
+	qmsg := dnsmessage.Message{
+		Header: dnsmessage.Header{ID: newID()},
+		Questions: []dnsmessage.Question{q},
+	}
+	return ExchangeTCP(qmsg, addr)
+}
+
+// Ask sends a message with q to addr and returns its response.
+// The exchange is encrypted using DNS over TLS.
+func AskTLS(q dnsmessage.Question, addr string) (dnsmessage.Message, error) {
+	qmsg := dnsmessage.Message{
+		Header: dnsmessage.Header{ID: newID()},
+		Questions: []dnsmessage.Question{q},
+	}
+	return ExchangeTLS(qmsg, addr)
+}
 
 // Exchange performs a synchronous, unencrypted UDP DNS exchange with addr and returns its
 // reply to msg.
