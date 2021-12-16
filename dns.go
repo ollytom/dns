@@ -161,6 +161,8 @@ func exchange(msg dnsmessage.Message, conn net.Conn) (dnsmessage.Message, error)
 	}
 	if rmsg.Header.ID != msg.Header.ID {
 		return rmsg, errMismatchedID
+	} else if rmsg.Questions[0] != msg.Questions[0] {
+		return rmsg, fmt.Errorf("mismatched response to question")
 	}
 	return rmsg, nil
 }
