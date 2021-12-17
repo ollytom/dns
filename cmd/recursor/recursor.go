@@ -26,6 +26,7 @@ func handler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
 	var rmsg dnsmessage.Message
 	rmsg.Header.ID = qmsg.Header.ID
 	rmsg.Header.Response = true
+	rmsg.Header.RecursionAvailable = true
 	rmsg.Questions = qmsg.Questions
 
 	if reject, rc := shouldReject(qmsg); reject {
@@ -33,6 +34,7 @@ func handler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
 		w.WriteMsg(rmsg)
 		return
 	}
+	rmsg.RecursionDesired = true
 
 	q := qmsg.Questions[0]
 	cache.RLock()
