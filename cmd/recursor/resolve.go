@@ -1,12 +1,13 @@
-package dns
+package main
 
 import (
 	"fmt"
 	"net"
 	"strings"
 	"golang.org/x/net/dns/dnsmessage"
-)
 
+	"olowe.co/dns"
+)
 
 // appends the DNS port to the IP to be used in a dial string.
 func ip2dial(ip net.IP) string {
@@ -37,11 +38,11 @@ const rootD = "199.7.91.13"
 const rootE = "192.203.230.10"
 var roots []net.IP = []net.IP{net.ParseIP(rootA), net.ParseIP(rootB), net.ParseIP(rootC)}
 
-func ResolveFromRoot(q dnsmessage.Question) (dnsmessage.Message, error) {
-	return Resolve(q, roots)
+func resolveFromRoot(q dnsmessage.Question) (dnsmessage.Message, error) {
+	return resolve(q, roots)
 }
 
-func Resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
+func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 	var rmsg dnsmessage.Message
 	var err error
 	for _, ip := range next {
@@ -49,7 +50,7 @@ func Resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 		if isIPv6(ip) {
 			continue
 		}
-		rmsg, err = Ask(q, ip2dial(ip))
+		rmsg, err = dns.Ask(q, ip2dial(ip))
 		if rmsg.Header.Authoritative {
 			return rmsg, err
 		} else if rmsg.Header.RCode == dnsmessage.RCodeSuccess && err == nil {
@@ -62,7 +63,7 @@ func Resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 
 	// no authoritative answer, so start looking for hints of who to ask next
 	if len(rmsg.Additionals) > 0 {
-		return Resolve(q, nextServerAddrs(rmsg.Additionals))
+		return resolve(q, nextServerAddrs(rmsg.Additionals))
 	}
 
 	// no hints in additionals, check authorities
@@ -71,14 +72,14 @@ func Resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 			switch b := a.Body.(type) {
 			case *dnsmessage.NSResource:
 				newq := dnsmessage.Question{Name: b.NS, Type: dnsmessage.TypeA, Class: q.Class}
-				rmsg, err = ResolveFromRoot(newq)
+				rmsg, err = resolveFromRoot(newq)
 				if err != nil {
 					continue
 				}
 				if len(rmsg.Answers) > 0 {
-					return Resolve(q, nextServerAddrs(rmsg.Answers))
+					return resolve(q, nextServerAddrs(rmsg.Answers))
 				}
-				return Resolve(q, nextServerAddrs(rmsg.Additionals))
+				return resolve(q, nextServerAddrs(rmsg.Additionals))
 			}
 		}
 	}

@@ -45,7 +45,7 @@ func handler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
 	}
 	cache.RUnlock()
 
-	resolved, err := dns.ResolveFromRoot(q)
+	resolved, err := resolveFromRoot(q)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		rmsg.Header.RCode = dnsmessage.RCodeServerFailure
