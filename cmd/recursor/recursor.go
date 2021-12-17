@@ -9,32 +9,32 @@ import (
 	"olowe.co/dns"
 )
 
+func shouldReject(m *dnsmessage.Message) (bool, dnsmessage.RCode) {
+	if !m.Header.RecursionDesired {
+		return true, dnsmessage.RCodeRefused
+	} else if m.Header.OpCode != dns.OpCodeQUERY {
+		return true, dnsmessage.RCodeRefused
+	} else if len(m.Questions) != 1 {
+		return true, dnsmessage.RCodeFormatError
+	} else if m.Questions[0].Type == dnsmessage.TypeALL {
+		return true, dnsmessage.RCodeNotImplemented
+	}
+	return false, dnsmessage.RCodeSuccess
+}
+
 func handler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
 	var rmsg dnsmessage.Message
 	rmsg.Header.ID = qmsg.Header.ID
 	rmsg.Header.Response = true
 	rmsg.Questions = qmsg.Questions
 
-	if !qmsg.Header.RecursionDesired {
-		rmsg.Header.RCode = dnsmessage.RCodeRefused
-		w.WriteMsg(rmsg)
-		return
-	}
-	// Reject multiple questions; not even BIND supports it.
-	if len(qmsg.Questions) > 1 {
-		rmsg.Header.RCode = dnsmessage.RCodeFormatError
+	if reject, rc := shouldReject(qmsg); reject {
+		rmsg.Header.RCode = rc
 		w.WriteMsg(rmsg)
 		return
 	}
 
 	q := qmsg.Questions[0]
-	// CloudFlare rejects these queries too. See RFC 8482
-	if q.Type == dnsmessage.TypeALL {
-		rmsg.Header.RCode = dnsmessage.RCodeNotImplemented
-		w.WriteMsg(rmsg)
-		return
-	}
-
 	cache.RLock()
 	if answers, ok := cache.m[q]; ok {
 		rmsg.Answers = answers

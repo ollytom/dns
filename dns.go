@@ -82,6 +82,8 @@ import (
 const MediaType string = "application/dns-message"
 const MaxMsgSize int = 65535 // max size of a message in bytes
 
+const OpCodeQUERY dnsmessage.OpCode = 0
+
 var errMismatchedID = errors.New("mismatched message id")
 
 var randomsrc *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
