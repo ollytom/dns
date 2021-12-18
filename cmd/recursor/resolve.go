@@ -51,10 +51,10 @@ func nextServerAddrs(resources []dnsmessage.Resource) []net.IP {
 }
 
 func resolveFromRoot(q dnsmessage.Question) (dnsmessage.Message, error) {
-	return resolve(q, roots)
+	return resolve(q, roots, 0)
 }
 
-func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
+func resolve(q dnsmessage.Question, next []net.IP, depth int) (dnsmessage.Message, error) {
 	var rmsg dnsmessage.Message
 	var err error
 	if rrs, ok := lookup(q.Name, q.Type); ok {
@@ -62,6 +62,10 @@ func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 		return dnsmessage.Message{Answers: rrs}, nil
 	}
 	fmt.Fprintln(os.Stderr, "cache miss", q.Name, q.Type)
+
+	if depth > 12 {
+		return dnsmessage.Message{}, fmt.Errorf("query loop")
+	}
 
 	for _, ip := range next {
 		// Aussie Broadband doesn't support IPv6 yet!
@@ -110,9 +114,9 @@ func resolve(q dnsmessage.Question, next []net.IP) (dnsmessage.Message, error) {
 					continue
 				}
 				if len(rmsg.Answers) > 0 {
-					return resolve(q, nextServerAddrs(rmsg.Answers))
+					return resolve(q, nextServerAddrs(rmsg.Answers), depth+1)
 				}
-				return resolve(q, nextServerAddrs(rmsg.Additionals))
+				return resolve(q, nextServerAddrs(rmsg.Additionals), depth+1)
 			default:
 				return rmsg, fmt.Errorf("unexpected authority resource type %s", a.Header.Type)
 			}
