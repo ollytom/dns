@@ -6,16 +6,14 @@ TCP (including TLS).
 The package deliberately does not implement all features of the DNS
 specifications. Notably EDNS and DNSSEC are unsupported.
 
-The most basic operation is creating a DNS message, sending it to a
-DNS server, then handling the reply using Exchange:
+The most basic operation is creating a question, asking the DNS server
+the question, then handling the response using Ask:
 
-	qmsg := dnsmessage.Message{
-		Header: dnsmessage.Header{ID: 1},
-		Questions: []dnsmessage.Question{
-			// ...
-		},
+	q := dnsmessage.Question{
+		Name: dnsmessage.MustNewName("www.example.com."),
+		Type: dnsmessage.TypeAAAA,
 	}
-	rmsg, err := dns.Exchange(qmsg, "192.0.2.1:domain")
+	resp, err := dns.Ask(q, "192.0.2.1:domain")
 	// ...
 
 Queries to a recursive resolver via DNS over TLS (DoT) can be made with ExchangeTLS:
