@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"io"
 	"net"
-	"time"
 	"testing"
+	"time"
 )
 
 func TestServer(t *testing.T) {
@@ -67,11 +67,11 @@ func BenchmarkPacketVsStream(b *testing.B) {
 	addr := "127.0.0.1:51113"
 	var networks = []string{"udp", "tcp"}
 	for _, net := range networks {
-		go func(){
+		go func() {
 			b.Fatal(ListenAndServe(net, addr, nil))
 		}()
 		b.Run(net, func(b *testing.B) {
-			for i := 0; i<= b.N; i++ {
+			for i := 0; i <= b.N; i++ {
 				if net == "udp" {
 					if rmsg, err := Ask(testq, addr); err != nil {
 						b.Log(rmsg)

@@ -11,24 +11,24 @@ import (
 var testq = dnsmessage.Question{Name: dnsmessage.MustNewName("www.example.com."), Type: dnsmessage.TypeA, Class: dnsmessage.ClassINET}
 
 func resolveBadly(w ResponseWriter, qmsg *dnsmessage.Message) {
-		rmsg := dnsmessage.Message{
-			Header: dnsmessage.Header{
-				ID:       qmsg.Header.ID + 69,
-				Response: false,
-				RCode:    dnsmessage.RCodeNameError,
-			},
-			Questions: qmsg.Questions,
-		}
-		w.WriteMsg(rmsg)
+	rmsg := dnsmessage.Message{
+		Header: dnsmessage.Header{
+			ID:       qmsg.Header.ID + 69,
+			Response: false,
+			RCode:    dnsmessage.RCodeNameError,
+		},
+		Questions: qmsg.Questions,
+	}
+	w.WriteMsg(rmsg)
 }
 
 func resolveWrongQuestion(w ResponseWriter, qmsg *dnsmessage.Message) {
 	wrongq := dnsmessage.Question{Name: dnsmessage.MustNewName("blabla.example.org."), Type: dnsmessage.TypeNS, Class: dnsmessage.ClassCHAOS}
 	rmsg := dnsmessage.Message{
 		Header: dnsmessage.Header{
-			ID:       qmsg.Header.ID,
-			Response: true,
-			RCode:    dnsmessage.RCodeSuccess,
+			ID:            qmsg.Header.ID,
+			Response:      true,
+			RCode:         dnsmessage.RCodeSuccess,
 			Authoritative: true,
 		},
 		Questions: []dnsmessage.Question{wrongq},

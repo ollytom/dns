@@ -1,8 +1,8 @@
 package main
 
 import (
-	"sync"
 	"golang.org/x/net/dns/dnsmessage"
+	"sync"
 )
 
 var cache = struct {

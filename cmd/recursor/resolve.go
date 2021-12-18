@@ -30,7 +30,7 @@ func isIPv6(ip net.IP) bool {
 func filterRRs(rrs []dnsmessage.Resource, n dnsmessage.Name, t dnsmessage.Type) []dnsmessage.Resource {
 	var matches []dnsmessage.Resource
 	for _, r := range rrs {
-		if (r.Header.Name == n && r.Header.Type == t) {
+		if r.Header.Name == n && r.Header.Type == t {
 			matches = append(matches, r)
 		}
 	}

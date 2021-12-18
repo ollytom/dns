@@ -94,7 +94,7 @@ func newID() uint16 {
 // The exchange is unencrypted using UDP.
 func Ask(q dnsmessage.Question, addr string) (dnsmessage.Message, error) {
 	qmsg := dnsmessage.Message{
-		Header: dnsmessage.Header{ID: newID()},
+		Header:    dnsmessage.Header{ID: newID()},
 		Questions: []dnsmessage.Question{q},
 	}
 	return Exchange(qmsg, addr)
@@ -104,7 +104,7 @@ func Ask(q dnsmessage.Question, addr string) (dnsmessage.Message, error) {
 // The exchange is unencrypted using TCP.
 func AskTCP(q dnsmessage.Question, addr string) (dnsmessage.Message, error) {
 	qmsg := dnsmessage.Message{
-		Header: dnsmessage.Header{ID: newID()},
+		Header:    dnsmessage.Header{ID: newID()},
 		Questions: []dnsmessage.Question{q},
 	}
 	return ExchangeTCP(qmsg, addr)
@@ -114,7 +114,7 @@ func AskTCP(q dnsmessage.Question, addr string) (dnsmessage.Message, error) {
 // The exchange is encrypted using DNS over TLS.
 func AskTLS(q dnsmessage.Question, addr string) (dnsmessage.Message, error) {
 	qmsg := dnsmessage.Message{
-		Header: dnsmessage.Header{ID: newID()},
+		Header:    dnsmessage.Header{ID: newID()},
 		Questions: []dnsmessage.Question{q},
 	}
 	return ExchangeTLS(qmsg, addr)

@@ -6,8 +6,8 @@ import (
 )
 
 type Zone struct {
-	Name dnsmessage.Name
-	SOA dnsmessage.SOAResource
+	Name      dnsmessage.Name
+	SOA       dnsmessage.SOAResource
 	Resources []dnsmessage.Resource
 }
 

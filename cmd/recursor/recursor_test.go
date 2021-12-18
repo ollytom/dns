@@ -33,7 +33,7 @@ func compareMsg(want, got dnsmessage.Message) error {
 	if len(want.Answers) != len(got.Answers) {
 		return fmt.Errorf("mismatched answer count")
 	}
-	if (len(want.Answers) == 0 || len(got.Answers) == 0) {
+	if len(want.Answers) == 0 || len(got.Answers) == 0 {
 		return fmt.Errorf("unsupported comparison of empty answer messages")
 	}
 	wantaddr, ok := want.Answers[0].Body.(*dnsmessage.AAAAResource)
