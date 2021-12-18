@@ -97,8 +97,8 @@ func resolve(q dnsmessage.Question, next []net.IP, depth int) (dnsmessage.Messag
 		}
 	}
 	for _, a := range rmsg.Additionals {
-		matches := filterRRs(rmsg.Additionals, a.Header.Name, a.Header.Type)
 		if _, ok := lookup(a.Header.Name, a.Header.Type); !ok {
+			matches := filterRRs(rmsg.Additionals, a.Header.Name, a.Header.Type)
 			insert(a.Header.Name, a.Header.Type, matches)
 			fmt.Fprintln(os.Stderr, "cached", q.Name, q.Type)
 		}
