@@ -117,3 +117,30 @@ func TestNXDomain(t *testing.T) {
 	}
 	t.Logf("wanted: %+v got %+v", wanted, got)
 }
+
+func TestRefused(t *testing.T) {
+	var wanted, got dnsmessage.Message
+	var err error
+	wanted, err = dns.Exchange(tquery, quad9)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "skipping %s: %v\n", t.Name(), err)
+		t.Skip("query internet DNS:", err)
+	}
+	q := tquery
+	q.Questions[0].Name = dnsmessage.MustNewName("kjyq.com.")
+	wanted, err = dns.Exchange(q, "8.8.4.4:domain")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// try twice: first for fresh response, second for cached response
+	for i := 0; i <= 1; i++ {
+		got, err = dns.Exchange(q, testAddr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if wanted.Header != got.Header {
+			t.Error("mismatched headers")
+		}
+	}
+	t.Logf("wanted: %+v got %+v", wanted, got)
+}
