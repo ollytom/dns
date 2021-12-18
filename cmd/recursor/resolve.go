@@ -88,6 +88,8 @@ func resolve(q dnsmessage.Question, next []net.IP, depth int) (dnsmessage.Messag
 	}
 	fmt.Println("no auth answer")
 
+	// cache resource records from authorities, additionals sections if we
+	// don't have them already (i.e. from authoritative answers)
 	if len(rmsg.Authorities) > 0 {
 		if _, ok := lookup(rmsg.Authorities[0].Header.Name, rmsg.Authorities[0].Header.Type); !ok {
 			insert(rmsg.Authorities[0].Header.Name, rmsg.Authorities[0].Header.Type, rmsg.Authorities)
