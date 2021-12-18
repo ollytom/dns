@@ -37,19 +37,6 @@ func filterRRs(rrs []dnsmessage.Resource, n dnsmessage.Name, t dnsmessage.Type) 
 	return matches
 }
 
-func nextServerAddrs(resources []dnsmessage.Resource) []net.IP {
-	var next []net.IP
-	for _, r := range resources {
-		switch b := r.Body.(type) {
-		case *dnsmessage.AResource:
-			next = append(next, net.IP(b.A[:]))
-		case *dnsmessage.AAAAResource:
-			next = append(next, net.IP(b.AAAA[:]))
-		}
-	}
-	return next
-}
-
 func resolveFromRoot(q dnsmessage.Question) (dnsmessage.Message, error) {
 	return resolve(q, roots, 0)
 }
@@ -116,15 +103,15 @@ func resolve(q dnsmessage.Question, next []net.IP, depth int) (dnsmessage.Messag
 					continue
 				}
 				if len(rmsg.Answers) > 0 {
-					return resolve(q, nextServerAddrs(rmsg.Answers), depth+1)
+					return resolve(q, dns.ExtractIPs(rmsg.Answers), depth+1)
 				}
-				return resolve(q, nextServerAddrs(rmsg.Additionals), depth+1)
+				return resolve(q, dns.ExtractIPs(rmsg.Additionals), depth+1)
 			default:
 				return rmsg, fmt.Errorf("unexpected authority resource type %s", a.Header.Type)
 			}
 		}
 	}
 
-	// No real answer, no more servers to ask; return our best guess
-	return rmsg, nil
+	// return our best guess anyway
+	return rmsg, fmt.Errorf("resolve %s: no more nameservers to ask", q.Name)
 }

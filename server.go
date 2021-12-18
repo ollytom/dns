@@ -148,3 +148,18 @@ func DefaultHandler(w ResponseWriter, msg *dnsmessage.Message) {
 	rmsg.Header.RCode = dnsmessage.RCodeNotImplemented
 	w.WriteMsg(rmsg)
 }
+
+// ExtractIPs extracts any IP addresses from resources. An empty slice is
+// returned if there are no addresses.
+func ExtractIPs(resources []dnsmessage.Resource) []net.IP {
+	var ips []net.IP
+	for _, r := range resources {
+		switch b := r.Body.(type) {
+		case *dnsmessage.AResource:
+			ips = append(ips, net.IP(b.A[:]))
+		case *dnsmessage.AAAAResource:
+			ips = append(ips, net.IP(b.AAAA[:]))
+		}
+	}
+	return ips
+}
