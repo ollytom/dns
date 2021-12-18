@@ -8,33 +8,50 @@ import (
 	"olowe.co/dns"
 )
 
-func shouldReject(m *dnsmessage.Message) (bool, dnsmessage.RCode) {
-	if !m.Header.RecursionDesired {
-		return true, dnsmessage.RCodeRefused
-	} else if m.Header.OpCode != dns.OpCodeQUERY {
-		return true, dnsmessage.RCodeRefused
-	} else if len(m.Questions) != 1 {
-		return true, dnsmessage.RCodeFormatError
-	} else if m.Questions[0].Type == dnsmessage.TypeALL {
-		return true, dnsmessage.RCodeNotImplemented
-	} else if m.Questions[0].Class != dnsmessage.ClassINET {
-		return true, dnsmessage.RCodeNotImplemented
+// okQType returns true if t is a query type that we can resolve by
+// recursively querying nameservers.
+func okQType(t dnsmessage.Type) bool {
+	switch t {
+	case dnsmessage.TypeA, dnsmessage.TypeNS, dnsmessage.TypeCNAME, dnsmessage.TypeSOA, dnsmessage.TypePTR, dnsmessage.TypeMX, dnsmessage.TypeTXT, dnsmessage.TypeAAAA, dnsmessage.TypeSRV, dnsmessage.TypeOPT:
+		return true
 	}
-	return false, dnsmessage.RCodeSuccess
+	return false
+}
+
+// rejectHandler is a safeguard to prevent queries we don't want (or support)
+// to be recursively resolved. It returns true if the message was rejected.
+func rejectHandler(w dns.ResponseWriter, qmsg *dnsmessage.Message) bool {
+	if !qmsg.Header.RecursionDesired {
+		dns.Refuse(w, qmsg)
+		return true
+	} else if qmsg.Header.OpCode != dns.OpCodeQUERY {
+		dns.Refuse(w, qmsg)
+		return true
+	} else if len(qmsg.Questions) != 1 {
+		dns.FormatError(w, qmsg)
+		return true
+	}
+	q := qmsg.Questions[0]
+	if !okQType(q.Type) {
+		dns.NotImplemented(w, qmsg)
+		return true
+	} else if q.Class != dnsmessage.ClassINET {
+		dns.NotImplemented(w, qmsg)
+		return true
+	}
+	return false
 }
 
 func handler(w dns.ResponseWriter, qmsg *dnsmessage.Message) {
+	if rejected := rejectHandler(w, qmsg); rejected {
+		return
+	}
+
 	var rmsg dnsmessage.Message
 	rmsg.Header.ID = qmsg.Header.ID
 	rmsg.Header.Response = true
 	rmsg.Header.RecursionAvailable = true
 	rmsg.Questions = qmsg.Questions
-
-	if reject, rc := shouldReject(qmsg); reject {
-		rmsg.Header.RCode = rc
-		w.WriteMsg(rmsg)
-		return
-	}
 	rmsg.RecursionDesired = true
 
 	q := qmsg.Questions[0]

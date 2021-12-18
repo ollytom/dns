@@ -132,21 +132,97 @@ func ListenAndServe(network, addr string, handler Handler) error {
 	return srv.ListenAndServe()
 }
 
-// DefaultHandler responds to all DNS messages identically. Recursivew
-// queries are refused and all others are replied to with a "not
-// implemented" message. It is intended as a safe default for a Server
-// which does not set a Handler.
-func DefaultHandler(w ResponseWriter, msg *dnsmessage.Message) {
-	var rmsg dnsmessage.Message
-	rmsg.Header.ID = msg.Header.ID
-	if msg.Header.RecursionDesired {
-		rmsg.Header.RCode = dnsmessage.RCodeRefused
-		w.WriteMsg(rmsg)
-		return
+// DefaultHandler responds to all DNS messages identically; all message
+// are refused. It is intended as a safe default for a Server which
+// does not set a Handler.
+var DefaultHandler = Refuse
+
+// FormatError replies to the message with a Format Error message.
+func FormatError(w ResponseWriter, msg *dnsmessage.Message) {
+	w.WriteMsg(dnsmessage.Message{
+		Header: dnsmessage.Header{
+			ID:               msg.Header.ID,
+			Response:         true,
+			RecursionDesired: msg.Header.RecursionDesired,
+			RCode:            dnsmessage.RCodeFormatError,
+		},
+		Questions: msg.Questions,
+	})
+}
+
+// ServerFailure replies to the message with a Server Failure (SERVFAIL) message.
+func ServerFailure(w ResponseWriter, msg *dnsmessage.Message) {
+	w.WriteMsg(dnsmessage.Message{
+		Header: dnsmessage.Header{
+			ID:               msg.Header.ID,
+			Response:         true,
+			RecursionDesired: msg.Header.RecursionDesired,
+			RCode:            dnsmessage.RCodeServerFailure,
+		},
+		Questions: msg.Questions,
+	})
+}
+
+// NotImplemented replies to the message with a Format Error message.
+func NotImplemented(w ResponseWriter, msg *dnsmessage.Message) {
+	w.WriteMsg(dnsmessage.Message{
+		Header: dnsmessage.Header{
+			ID:               msg.Header.ID,
+			Response:         true,
+			RecursionDesired: msg.Header.RecursionDesired,
+			RCode:            dnsmessage.RCodeNotImplemented,
+		},
+		Questions: msg.Questions,
+	})
+}
+
+// Refuse replies to the message with a Refused message.
+func Refuse(w ResponseWriter, msg *dnsmessage.Message) {
+	w.WriteMsg(dnsmessage.Message{
+		Header: dnsmessage.Header{
+			ID:               msg.Header.ID,
+			Response:         true,
+			RecursionDesired: msg.Header.RecursionDesired,
+			RCode:            dnsmessage.RCodeRefused,
+		},
+		Questions: msg.Questions,
+	})
+}
+
+// NameError replies to the message with a Name error (NXDOMAIN) message.
+// The SOA resource and its resource header rh are included in the reply.
+// Servers performing recursive resolution should set authoritative to false and
+// authoritative servers should set this to true.
+func NameError(w ResponseWriter, msg *dnsmessage.Message, rh dnsmessage.ResourceHeader, soa dnsmessage.SOAResource, authoritative bool) {
+	buf := make([]byte, 2, 512)
+	header := dnsmessage.Header{
+		ID:               msg.Header.ID,
+		Response:         true,
+		RecursionDesired: msg.Header.RecursionDesired,
+		Authoritative:    authoritative,
+		RCode:            dnsmessage.RCodeNameError,
 	}
-	rmsg.Questions = msg.Questions
-	rmsg.Header.RCode = dnsmessage.RCodeNotImplemented
-	w.WriteMsg(rmsg)
+	builder := dnsmessage.NewBuilder(buf, header)
+	builder.EnableCompression()
+	if err := builder.StartQuestions(); err != nil {
+		panic(err)
+	}
+	for _, q := range msg.Questions {
+		if err := builder.Question(q); err != nil {
+			panic(err)
+		}
+	}
+	if err := builder.StartAuthorities; err != nil {
+		panic(err)
+	}
+	if err := builder.SOAResource(rh, soa); err != nil {
+		panic(err)
+	}
+	buf, err := builder.Finish()
+	if err != nil {
+		panic(err)
+	}
+	w.Write(buf[2:])
 }
 
 // ExtractIPs extracts any IP addresses from resources. An empty slice is
