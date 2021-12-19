@@ -137,56 +137,36 @@ func ListenAndServe(network, addr string, handler Handler) error {
 // does not set a Handler.
 var DefaultHandler = Refuse
 
-// FormatError replies to the message with a Format Error message.
-func FormatError(w ResponseWriter, msg *dnsmessage.Message) {
+func respError(w ResponseWriter, msg *dnsmessage.Message, rcode dnsmessage.RCode) {
 	w.WriteMsg(dnsmessage.Message{
 		Header: dnsmessage.Header{
 			ID:               msg.Header.ID,
 			Response:         true,
 			RecursionDesired: msg.Header.RecursionDesired,
-			RCode:            dnsmessage.RCodeFormatError,
+			RCode:            rcode,
 		},
 		Questions: msg.Questions,
 	})
+}
+
+// FormatError replies to the message with a Format Error message.
+func FormatError(w ResponseWriter, msg *dnsmessage.Message) {
+	respError(w, msg, dnsmessage.RCodeFormatError)
 }
 
 // ServerFailure replies to the message with a Server Failure (SERVFAIL) message.
 func ServerFailure(w ResponseWriter, msg *dnsmessage.Message) {
-	w.WriteMsg(dnsmessage.Message{
-		Header: dnsmessage.Header{
-			ID:               msg.Header.ID,
-			Response:         true,
-			RecursionDesired: msg.Header.RecursionDesired,
-			RCode:            dnsmessage.RCodeServerFailure,
-		},
-		Questions: msg.Questions,
-	})
+	respError(w, msg, dnsmessage.RCodeServerFailure)
 }
 
 // NotImplemented replies to the message with a Format Error message.
 func NotImplemented(w ResponseWriter, msg *dnsmessage.Message) {
-	w.WriteMsg(dnsmessage.Message{
-		Header: dnsmessage.Header{
-			ID:               msg.Header.ID,
-			Response:         true,
-			RecursionDesired: msg.Header.RecursionDesired,
-			RCode:            dnsmessage.RCodeNotImplemented,
-		},
-		Questions: msg.Questions,
-	})
+	respError(w, msg, dnsmessage.RCodeNotImplemented)
 }
 
 // Refuse replies to the message with a Refused message.
 func Refuse(w ResponseWriter, msg *dnsmessage.Message) {
-	w.WriteMsg(dnsmessage.Message{
-		Header: dnsmessage.Header{
-			ID:               msg.Header.ID,
-			Response:         true,
-			RecursionDesired: msg.Header.RecursionDesired,
-			RCode:            dnsmessage.RCodeRefused,
-		},
-		Questions: msg.Questions,
-	})
+	respError(w, msg, dnsmessage.RCodeRefused)
 }
 
 // NameError replies to the message with a Name error (NXDOMAIN) message.
