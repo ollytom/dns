@@ -132,7 +132,7 @@ func ListenAndServe(network, addr string, handler Handler) error {
 	return srv.ListenAndServe()
 }
 
-// DefaultHandler responds to all DNS messages identically; all message
+// DefaultHandler responds to all DNS messages identically; all messages
 // are refused. It is intended as a safe default for a Server which
 // does not set a Handler.
 var DefaultHandler = Refuse
@@ -170,9 +170,9 @@ func Refuse(w ResponseWriter, msg *dnsmessage.Message) {
 }
 
 // NameError replies to the message with a Name error (NXDOMAIN) message.
-// The SOA resource and its resource header rh are included in the reply.
-// Servers performing recursive resolution should set authoritative to false and
-// authoritative servers should set this to true.
+// The SOA resource and resource header are included in the reply.
+// Authoritative servers for the domain in msg should set authoritative to true.
+// Others, such as recursive resolvers answers queries, should set this to false.
 func NameError(w ResponseWriter, msg *dnsmessage.Message, rh dnsmessage.ResourceHeader, soa dnsmessage.SOAResource, authoritative bool) {
 	buf := make([]byte, 2, 512)
 	header := dnsmessage.Header{
