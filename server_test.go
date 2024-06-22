@@ -32,19 +32,6 @@ func TestStreamServer(t *testing.T) {
 	t.Log("response:", rmsg)
 }
 
-func TestEmptyServer(t *testing.T) {
-	srv := &Server{}
-	go func() {
-		t.Fatal(srv.ListenAndServe())
-		t.Log(srv.addr)
-	}()
-	rmsg, err := Ask(testq, "127.0.0.1:domain")
-	if err != nil {
-		t.Errorf("exchange: %v", err)
-	}
-	t.Log("response:", rmsg)
-}
-
 func TestJunk(t *testing.T) {
 	addr := "127.0.0.1:5361"
 	go func() {

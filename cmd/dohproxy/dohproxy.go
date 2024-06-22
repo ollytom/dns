@@ -10,7 +10,7 @@ import (
 	"os"
 	"strconv"
 
-	"git.sr.ht/~otl/dns"
+	"olowe.co/dns"
 )
 
 type metrics struct {
