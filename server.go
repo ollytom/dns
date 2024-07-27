@@ -1,8 +1,9 @@
 package dns
 
 import (
-	"golang.org/x/net/dns/dnsmessage"
 	"net"
+
+	"golang.org/x/net/dns/dnsmessage"
 )
 
 type Zone struct {
@@ -159,7 +160,8 @@ func ServerFailure(w ResponseWriter, msg *dnsmessage.Message) {
 	respError(w, msg, dnsmessage.RCodeServerFailure)
 }
 
-// NotImplemented replies to the message with a Format Error message.
+// NotImplemented replies to the message with a Not Implemented
+// (NOTIMP) message.
 func NotImplemented(w ResponseWriter, msg *dnsmessage.Message) {
 	respError(w, msg, dnsmessage.RCodeNotImplemented)
 }
